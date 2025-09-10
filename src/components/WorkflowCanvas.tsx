@@ -62,7 +62,7 @@ const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ className = '' }) => {
       setNodes([]);
       setEdges([]);
     }
-  }, [currentWorkflow?.id, setNodes, setEdges]);
+  }, [currentWorkflow?.id, currentWorkflow?.nodes, currentWorkflow?.edges, setNodes, setEdges]);
 
   const onNodesChangeHandler: OnNodesChange = useCallback(
     (changes) => {
