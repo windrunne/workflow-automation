@@ -59,6 +59,10 @@ const workflowSlice = createSlice({
       const workflow = state.workflows.find(w => w.id === action.payload);
       if (workflow) {
         state.currentWorkflow = workflow;
+        
+        state.ui.selectedNodeId = undefined;
+        state.ui.selectedEdgeId = undefined;
+        state.ui.isConfigPanelOpen = false;
       }
     },
 
@@ -183,8 +187,6 @@ const workflowSlice = createSlice({
       target: string;
       sourceHandle?: string;
       targetHandle?: string;
-      label?: string;
-      condition?: string;
     }>) => {
       if (!state.currentWorkflow) return;
 
@@ -195,12 +197,8 @@ const workflowSlice = createSlice({
         sourceHandle: action.payload.sourceHandle,
         targetHandle: action.payload.targetHandle,
         type: 'smoothstep',
-        animated: true,
-        data: {
-          label: action.payload.label,
-          condition: action.payload.condition
-        }
-      } as WorkflowEdge;
+        animated: true
+      };
 
       state.currentWorkflow.edges.push(newEdge);
       state.currentWorkflow.updatedAt = new Date();
