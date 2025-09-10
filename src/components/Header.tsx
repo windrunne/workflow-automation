@@ -5,9 +5,7 @@ import {
   ArrowDownTrayIcon, 
   ArrowUpTrayIcon,
   Cog6ToothIcon,
-  DocumentDuplicateIcon,
-  CheckCircleIcon,
-  StopCircleIcon
+  DocumentDuplicateIcon
 } from '@heroicons/react/24/outline';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
 import { 

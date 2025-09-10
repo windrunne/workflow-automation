@@ -1,4 +1,4 @@
-import React from 'react';
+import { ComponentType } from 'react';
 import { 
   WorkflowStepType, 
   SourceStepSubtype, 
@@ -33,7 +33,7 @@ export interface StepMetadata {
   subtype: string;
   label: string;
   description: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
   color: string;
   category: string;
 }

@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import ReactFlow, {
   useNodesState,
   useEdgesState,
@@ -49,7 +49,7 @@ const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ className = '' }) => {
   const dispatch = useAppDispatch();
   const { currentWorkflow, ui } = useAppSelector((state) => state.workflow);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [reactFlowInstance, setReactFlowInstance] = React.useState<ReactFlowInstance | null>(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(currentWorkflow?.nodes || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState((currentWorkflow?.edges as Edge[]) || []);

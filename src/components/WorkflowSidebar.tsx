@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Bars3Icon } from '@heroicons/react/24/outline';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
 import { useDebounce } from '../hooks/useDebounce';
@@ -36,7 +36,7 @@ const WorkflowSidebar: React.FC<WorkflowSidebarProps> = ({ className = '' }) => 
     dispatch(toggleSidebar());
   };
 
-  const filteredCategories = React.useMemo(() => {
+  const filteredCategories = useMemo(() => {
     if (!debouncedSearchTerm) return STEP_CATEGORIES;
     
     const filtered: Record<string, StepMetadata[]> = {};

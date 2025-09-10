@@ -15,7 +15,7 @@ import type {
   StepConfig
 } from '../types/workflow';
 import { AVAILABLE_STEPS } from '../constants/workflowSteps';
-import { CheckIcon, Circle, SettingsIcon } from 'lucide-react';
+import { CheckIcon, SettingsIcon } from 'lucide-react';
 
 interface ConfigPanelProps {
   className?: string;
