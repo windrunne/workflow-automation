@@ -4,7 +4,8 @@ import {
   SourceStepSubtype, 
   ProcessingStepSubtype, 
   DecisionStepSubtype, 
-  OutputStepSubtype 
+  OutputStepSubtype,
+  IntegrationStepSubtype,
 } from '../types/workflow';
 import {
   LinkIcon,
@@ -25,8 +26,9 @@ import {
   DocumentArrowDownIcon,
   ServerStackIcon,
   BellIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
+import { SearchIcon } from 'lucide-react';
 
 export interface StepMetadata {
   type: WorkflowStepType;
@@ -212,6 +214,37 @@ export const AVAILABLE_STEPS: StepMetadata[] = [
     icon: DocumentTextIcon,
     color: 'bg-purple-500',
     category: 'Outputs'
+  },
+
+  {
+    type: WorkflowStepType.SAMPLE,
+    subtype: IntegrationStepSubtype.API_SEARCH,
+    label: 'API Search',
+    description: 'Search through external APIs',
+    icon: SearchIcon,
+    color: 'bg-gray-500',
+    category: 'Enterprise Integrations'
+  },
+
+  {
+    type: WorkflowStepType.DECISION,
+    subtype: DecisionStepSubtype.CONDITIONAL_BRANCH,
+    label: 'Conditional Branch',
+    description: 'Based on Persona Classification',
+    icon: CodeBracketSquareIcon,
+    color: 'bg-emerald-500',
+    category: 'Decision Logic'
+  },
+
+
+  {
+    type: WorkflowStepType.OUTPUT,
+    subtype: OutputStepSubtype.END_NODE,
+    label: 'End',
+    description: 'Workflow completion node',
+    icon: Square3Stack3DIcon,
+    color: 'bg-gray-500',
+    category: 'Outputs'
   }
 ];
 
@@ -248,23 +281,55 @@ export const DEFAULT_STEP_CONFIGS = {
     enabled: true,
     timeout: 30,
   },
+  [WorkflowStepType.SAMPLE]: {
+    name: 'New Integration Step',
+    description: '',
+    enabled: true,
+    timeout: 45,
+  },
+  [WorkflowStepType.ANALYTICS]: {
+    name: 'New Analytics Step',
+    description: '',
+    enabled: true,
+    timeout: 60,
+  },
 };
 
 export const CONNECTION_RULES = {
   [WorkflowStepType.SOURCE]: [
     WorkflowStepType.PROCESSING,
     WorkflowStepType.DECISION,
-    WorkflowStepType.OUTPUT
+    WorkflowStepType.OUTPUT,
+    WorkflowStepType.SAMPLE,
+    WorkflowStepType.ANALYTICS
   ],
   [WorkflowStepType.PROCESSING]: [
     WorkflowStepType.PROCESSING,
     WorkflowStepType.DECISION,
-    WorkflowStepType.OUTPUT
+    WorkflowStepType.OUTPUT,
+    WorkflowStepType.SAMPLE,
+    WorkflowStepType.ANALYTICS
   ],
   [WorkflowStepType.DECISION]: [
     WorkflowStepType.PROCESSING,
     WorkflowStepType.DECISION,
-    WorkflowStepType.OUTPUT
+    WorkflowStepType.OUTPUT,
+    WorkflowStepType.SAMPLE,
+    WorkflowStepType.ANALYTICS
+  ],
+  [WorkflowStepType.SAMPLE]: [
+    WorkflowStepType.PROCESSING,
+    WorkflowStepType.DECISION,
+    WorkflowStepType.OUTPUT,
+    WorkflowStepType.SAMPLE,
+    WorkflowStepType.ANALYTICS
+  ],
+  [WorkflowStepType.ANALYTICS]: [
+    WorkflowStepType.PROCESSING,
+    WorkflowStepType.DECISION,
+    WorkflowStepType.OUTPUT,
+    WorkflowStepType.SAMPLE,
+    WorkflowStepType.ANALYTICS
   ],
   [WorkflowStepType.OUTPUT]: []
 };
@@ -277,5 +342,7 @@ export const VALIDATION_RULES = {
     [WorkflowStepType.PROCESSING]: ['name'],
     [WorkflowStepType.DECISION]: ['name'],
     [WorkflowStepType.OUTPUT]: ['name'],
+    [WorkflowStepType.SAMPLE]: ['name'],
+    [WorkflowStepType.ANALYTICS]: ['name'],
   }
 };

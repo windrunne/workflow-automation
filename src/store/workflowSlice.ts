@@ -187,8 +187,13 @@ const workflowSlice = createSlice({
       target: string;
       sourceHandle?: string;
       targetHandle?: string;
+      label?: string;
+      number?: string | number;
+      isClassification?: boolean;
     }>) => {
       if (!state.currentWorkflow) return;
+
+      const edgeNumber = state.currentWorkflow.edges.length + 1;
 
       const newEdge: WorkflowEdge = {
         id: uuidv4(),
@@ -196,14 +201,80 @@ const workflowSlice = createSlice({
         target: action.payload.target,
         sourceHandle: action.payload.sourceHandle,
         targetHandle: action.payload.targetHandle,
-        type: 'smoothstep',
-        animated: true
+        type: 'custom',
+        animated: true,
+        data: {
+          label: action.payload.label || (action.payload.sourceHandle ? action.payload.sourceHandle : undefined),
+          number: action.payload.number || edgeNumber.toString(),
+          isClassification: action.payload.isClassification || false
+        }
       };
 
       state.currentWorkflow.edges.push(newEdge);
       state.currentWorkflow.updatedAt = new Date();
     },
 
+    updateEdge: (state, action: PayloadAction<{
+      edgeId: string;
+      updates: Partial<{ label: string; number: string | number; isClassification: boolean; animated: boolean; style: any }>;
+    }>) => {
+      if (!state.currentWorkflow) return;
+
+      const edgeIndex = state.currentWorkflow.edges.findIndex(e => (e as any).id === action.payload.edgeId);
+      if (edgeIndex !== -1) {
+        const edge = state.currentWorkflow.edges[edgeIndex] as any;
+        if (action.payload.updates.label !== undefined) {
+          edge.data = { ...edge.data, label: action.payload.updates.label };
+        }
+        if (action.payload.updates.number !== undefined) {
+          edge.data = { ...edge.data, number: action.payload.updates.number };
+        }
+        if (action.payload.updates.isClassification !== undefined) {
+          edge.data = { ...edge.data, isClassification: action.payload.updates.isClassification };
+        }
+        if (action.payload.updates.animated !== undefined) {
+          edge.animated = action.payload.updates.animated;
+        }
+        if (action.payload.updates.style !== undefined) {
+          edge.style = { ...edge.style, ...action.payload.updates.style };
+        }
+        state.currentWorkflow.updatedAt = new Date();
+      }
+    },
+
+    updateNodeEdgeLabels: (state, action: PayloadAction<{
+      nodeId: string;
+      edgeLabels: { edgeId: string; label: string }[];
+    }>) => {
+      if (!state.currentWorkflow) return;
+
+      // Update the node config with edge labels
+      const nodeIndex = state.currentWorkflow.nodes.findIndex(n => n.id === action.payload.nodeId);
+      if (nodeIndex !== -1) {
+        const node = state.currentWorkflow.nodes[nodeIndex];
+        (node.data.config as any).edgeLabels = action.payload.edgeLabels.map(({ edgeId, label }) => ({
+          id: edgeId,
+          label
+        }));
+      }
+
+      // Update the actual edges
+      if (state.currentWorkflow) {
+        action.payload.edgeLabels.forEach(({ edgeId, label }) => {
+          const edgeIndex = state.currentWorkflow!.edges.findIndex(e => (e as any).id === edgeId);
+          if (edgeIndex !== -1) {
+            const edge = state.currentWorkflow!.edges[edgeIndex] as any;
+            edge.data = { 
+              ...edge.data, 
+              label,
+              isClassification: true 
+            };
+          }
+        });
+      }
+
+      state.currentWorkflow.updatedAt = new Date();
+    },
 
     deleteEdge: (state, action: PayloadAction<string>) => {
       if (!state.currentWorkflow) return;
@@ -312,6 +383,8 @@ export const {
   updateNodePosition,
   deleteNode,
   addEdge,
+  updateEdge,
+  updateNodeEdgeLabels,
   deleteEdge,
   setSelectedNode,
   setSelectedEdge,

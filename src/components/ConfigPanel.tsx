@@ -6,16 +6,20 @@ import {
   deleteNode, 
   setConfigPanelOpen 
 } from '../store/workflowSlice';
-import { WorkflowStepType, ConditionOperator } from '../types/workflow';
+import { WorkflowStepType, ConditionOperator, IntegrationStepSubtype } from '../types/workflow';
 import type { 
   SourceStepConfig, 
   ProcessingStepConfig, 
   DecisionStepConfig, 
   OutputStepConfig,
-  StepConfig
+  IntegrationStepConfig,
+  StepConfig,
+  ApiMethod
 } from '../types/workflow';
 import { AVAILABLE_STEPS } from '../constants/workflowSteps';
 import { CheckIcon, SettingsIcon } from 'lucide-react';
+import EdgeLabelsManager from './EdgeLabelsManager';
+import ApiMethodSelector from './ApiMethodSelector';
 
 interface ConfigPanelProps {
   className?: string;
@@ -52,6 +56,11 @@ const ConfigPanel: FC<ConfigPanelProps> = ({ className = '' }) => {
 
   const handleConfigChange = (field: string, value: any) => {
     const newConfig = { ...config, [field]: value } as StepConfig;
+    setConfig(newConfig);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleFullConfigChange = (newConfig: StepConfig) => {
     setConfig(newConfig);
     setHasUnsavedChanges(true);
   };
@@ -322,76 +331,83 @@ return {
     const decisionConfig = config as DecisionStepConfig;
     
     return (
-      <div className="space-y-4">
-        {decisionConfig.subtype === 'conditional' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Conditions
-            </label>
-            <div className="space-y-3">
-              {(decisionConfig.conditions || []).map((condition, index) => (
-                <div key={index} className="border border-gray-200 rounded-md p-3">
-                  <div className="grid grid-cols-3 gap-3">
-                    <input
-                      type="text"
-                      value={condition.field}
-                      onChange={(e) => {
-                        const newConditions = [...(decisionConfig.conditions || [])];
-                        newConditions[index] = { ...condition, field: e.target.value };
-                        handleConfigChange('conditions', newConditions);
-                      }}
-                      className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                      placeholder="Field name"
-                    />
-                    <select
-                      value={condition.operator}
-                      onChange={(e) => {
-                        const newConditions = [...(decisionConfig.conditions || [])];
-                        newConditions[index] = { ...condition, operator: e.target.value as ConditionOperator };
-                        handleConfigChange('conditions', newConditions);
-                      }}
-                      className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    >
-                      <option value={ConditionOperator.EQUALS}>Equals</option>
-                      <option value={ConditionOperator.NOT_EQUALS}>Not Equals</option>
-                      <option value={ConditionOperator.GREATER_THAN}>Greater Than</option>
-                      <option value={ConditionOperator.LESS_THAN}>Less Than</option>
-                      <option value={ConditionOperator.CONTAINS}>Contains</option>
-                      <option value={ConditionOperator.IS_EMPTY}>Is Empty</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={condition.value}
-                      onChange={(e) => {
-                        const newConditions = [...(decisionConfig.conditions || [])];
-                        newConditions[index] = { ...condition, value: e.target.value };
-                        handleConfigChange('conditions', newConditions);
-                      }}
-                      className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                      placeholder="Value"
-                    />
+      <div className="space-y-6">
+        {(decisionConfig.subtype === 'conditional' || decisionConfig.subtype === 'conditional_branch') && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Conditions
+              </label>
+              <div className="space-y-3">
+                {(decisionConfig.conditions || []).map((condition, index) => (
+                  <div key={index} className="border border-gray-200 rounded-md p-3">
+                    <div className="grid grid-cols-3 gap-3">
+                      <input
+                        type="text"
+                        value={condition.field}
+                        onChange={(e) => {
+                          const newConditions = [...(decisionConfig.conditions || [])];
+                          newConditions[index] = { ...condition, field: e.target.value };
+                          handleConfigChange('conditions', newConditions);
+                        }}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                        placeholder="Field name"
+                      />
+                      <select
+                        value={condition.operator}
+                        onChange={(e) => {
+                          const newConditions = [...(decisionConfig.conditions || [])];
+                          newConditions[index] = { ...condition, operator: e.target.value as ConditionOperator };
+                          handleConfigChange('conditions', newConditions);
+                        }}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      >
+                        <option value={ConditionOperator.EQUALS}>Equals</option>
+                        <option value={ConditionOperator.NOT_EQUALS}>Not Equals</option>
+                        <option value={ConditionOperator.GREATER_THAN}>Greater Than</option>
+                        <option value={ConditionOperator.LESS_THAN}>Less Than</option>
+                        <option value={ConditionOperator.CONTAINS}>Contains</option>
+                        <option value={ConditionOperator.IS_EMPTY}>Is Empty</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={condition.value}
+                        onChange={(e) => {
+                          const newConditions = [...(decisionConfig.conditions || [])];
+                          newConditions[index] = { ...condition, value: e.target.value };
+                          handleConfigChange('conditions', newConditions);
+                        }}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                        placeholder="Value"
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
-              <button
-                onClick={() => {
-                  const newConditions = [
-                    ...(decisionConfig.conditions || []),
-                    {
-                      field: '',
-                      operator: ConditionOperator.EQUALS,
-                      value: '',
-                      logicalOperator: 'AND' as const
-                    }
-                  ];
-                  handleConfigChange('conditions', newConditions);
-                }}
-                className="w-full py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors"
-              >
-                + Add Condition
-              </button>
+                ))}
+                <button
+                  onClick={() => {
+                    const newConditions = [
+                      ...(decisionConfig.conditions || []),
+                      {
+                        field: '',
+                        operator: ConditionOperator.EQUALS,
+                        value: '',
+                        logicalOperator: 'AND' as const
+                      }
+                    ];
+                    handleConfigChange('conditions', newConditions);
+                  }}
+                  className="w-full py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  + Add Condition
+                </button>
+              </div>
             </div>
-          </div>
+
+            {/* Edge Labels Manager */}
+            <div className="border-t border-gray-200 pt-4">
+              <EdgeLabelsManager nodeId={selectedNode.id} />
+            </div>
+          </>
         )}
       </div>
     );
@@ -456,6 +472,104 @@ return {
     );
   };
 
+  const renderIntegrationConfig = () => {
+    const integrationConfig = config as IntegrationStepConfig;
+    
+    return (
+      <div className="space-y-6">
+        {/* API Search Configuration */}
+        {integrationConfig.subtype === IntegrationStepSubtype.API_SEARCH && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                API Search Methods
+              </label>
+              <p className="text-sm text-gray-600 mb-4">
+                Select which API services to use for search operations.
+              </p>
+              <ApiMethodSelector
+                selectedMethods={integrationConfig.selectedApiMethods || []}
+                onMethodsChange={(methods: ApiMethod[]) => {
+                  console.log('Config Panel: API methods changed to:', methods);
+                  const updatedConfig: IntegrationStepConfig = {
+                    ...integrationConfig,
+                    selectedApiMethods: methods
+                  };
+                  handleFullConfigChange(updatedConfig);
+                }}
+              />
+            </div>
+
+            {/* API Endpoint Configuration */}
+            <div>
+              <label htmlFor="apiEndpoint" className="block text-sm font-medium text-gray-700 mb-2">
+                API Endpoint
+              </label>
+              <input
+                type="text"
+                id="apiEndpoint"
+                value={integrationConfig.apiEndpoint || ''}
+                onChange={(e) => {
+                  handleConfigChange('apiEndpoint', e.target.value);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="https://api.example.com/search"
+              />
+            </div>
+
+            {/* Request Method */}
+            <div>
+              <label htmlFor="requestMethod" className="block text-sm font-medium text-gray-700 mb-2">
+                Request Method
+              </label>
+              <select
+                id="requestMethod"
+                value={integrationConfig.requestMethod || 'GET'}
+                onChange={(e) => {
+                  handleConfigChange('requestMethod', e.target.value);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="DELETE">DELETE</option>
+              </select>
+            </div>
+          </>
+        )}
+
+        {/* Other Integration subtypes can be added here */}
+      </div>
+    );
+  };
+
+  const renderAnalyticsConfig = () => {
+    const analyticsConfig = config as any;
+    
+    return (
+      <div className="space-y-6">
+        {analyticsConfig.subtype === 'conditional_branch' && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Branch Logic
+              </label>
+              <p className="text-sm text-gray-600 mb-4">
+                This node branches workflow based on persona classification criteria.
+              </p>
+            </div>
+
+            {/* Edge Labels Manager for Analytics nodes */}
+            <div className="border-t border-gray-200 pt-4">
+              <EdgeLabelsManager nodeId={selectedNode.id} />
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   const renderTypeSpecificConfig = () => {
     switch (selectedNode.data.type) {
       case WorkflowStepType.SOURCE:
@@ -464,6 +578,10 @@ return {
         return renderProcessingConfig();
       case WorkflowStepType.DECISION:
         return renderDecisionConfig();
+      case WorkflowStepType.SAMPLE:
+        return renderIntegrationConfig();
+      case WorkflowStepType.ANALYTICS:
+        return renderAnalyticsConfig();
       case WorkflowStepType.OUTPUT:
         return renderOutputConfig();
       default:

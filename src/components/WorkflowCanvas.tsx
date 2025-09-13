@@ -32,13 +32,19 @@ import {
   updateViewport
 } from '../store/workflowSlice';
 import { WorkflowStepType } from '../types/workflow';
+import { getConfigSubtype } from '../utils/typeHelpers';
 import { AVAILABLE_STEPS } from '../constants/workflowSteps';
 
 import CustomNode from './CustomNode';
+import CustomEdge from './CustomEdge';
 import MiniMap from './MiniMap';
 
 const nodeTypes = {
   custom: CustomNode,
+};
+
+const edgeTypes = {
+  custom: CustomEdge,
 };
 
 interface WorkflowCanvasProps {
@@ -76,7 +82,7 @@ const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ className = '' }) => {
       });
       onNodesChange(changes);
     },
-    [dispatch]
+    [dispatch, onNodesChange]
   );
 
   const onEdgesChangeHandler: OnEdgesChange = useCallback(
@@ -88,21 +94,64 @@ const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ className = '' }) => {
       });
       onEdgesChange(changes);
     },
-    [dispatch]
+    [dispatch, onEdgesChange]
   );
 
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
       if (connection.source && connection.target) {
+        const sourceNode = currentWorkflow?.nodes.find(n => n.id === connection.source);
+        const targetNode = currentWorkflow?.nodes.find(n => n.id === connection.target);
+        
+        let label = '';
+        let isClassification = false;
+        
+        if (connection.sourceHandle === 'true') {
+          label = 'Yes';
+        } else if (connection.sourceHandle === 'false') {
+          label = 'No';
+        } else if (connection.sourceHandle === 'error') {
+          label = 'Error';
+        }
+        
+        if (connection.sourceHandle === 'branch') {
+          if (sourceNode?.data.type === 'decision' && 
+              getConfigSubtype(sourceNode.data.config) === 'conditional_branch') {
+            label = 'Classification Output';
+            isClassification = true;
+          }
+        }
+        
+        if (sourceNode?.data.type === 'decision' || sourceNode?.data.type === 'analytics') {
+          const subtype = getConfigSubtype(sourceNode.data.config);
+          if (subtype === 'conditional' || subtype === 'conditional_branch') {
+            isClassification = true;
+            if (connection.sourceHandle === 'true' && !label) {
+              label = 'Above the Line Personas';
+            } else if (connection.sourceHandle === 'false' && !label) {
+              label = 'Contact Center Operations';
+            } else if (!label) {
+              label = 'Classification Path';
+            }
+          }
+        }
+        
+        if (targetNode && targetNode.data.config.name?.toLowerCase().includes('no match')) {
+          label = 'No Match';
+          isClassification = true;
+        }
+
         dispatch(addWorkflowEdge({
           source: connection.source,
           target: connection.target,
           sourceHandle: connection.sourceHandle || undefined,
           targetHandle: connection.targetHandle || undefined,
+          label: label || undefined,
+          isClassification,
         }));
       }
     },
-    [dispatch]
+    [dispatch, currentWorkflow?.nodes]
   );
 
   const onSelectionChange = useCallback(
@@ -168,6 +217,17 @@ const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ className = '' }) => {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Don't trigger delete if user is typing in an input field, textarea, or content editable element
+      const target = event.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.contentEditable === 'true' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
       if (event.key === 'Delete' || event.key === 'Backspace') {
         if (ui.selectedNodeId) {
           dispatch(deleteNode(ui.selectedNodeId));
@@ -210,6 +270,7 @@ const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ className = '' }) => {
           onDragOver={onDragOver}
           onMove={onMove}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           defaultViewport={{ ...ui.viewport, zoom: ui.zoom }}
           minZoom={0.1}
           maxZoom={2}
@@ -217,7 +278,7 @@ const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ className = '' }) => {
           snapToGrid={true}
           snapGrid={[20, 20]}
           defaultEdgeOptions={{
-            type: 'smoothstep',
+            type: 'custom',
             animated: true,
             style: { strokeWidth: 2 }
           }}
@@ -240,14 +301,14 @@ const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ className = '' }) => {
           />
           
           {nodes.length === 0 && (
-            <Panel position="top-center" className="pointer-events-none">
+            <Panel position="top-center" className="pointer-events-auto">
               <div className="bg-white shadow-lg rounded-lg border border-gray-200 p-6 max-w-md">
                 <div className="text-center">
                   <div className="flex justify-center mb-3">
                     <RocketLaunchIcon className="w-12 h-12 text-primary-500" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-700 mb-2">Start Building Your Workflow</h3>
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-gray-500 text-sm mb-4">
                     Drag and drop components from the sidebar to create your workflow.
                     Connect them by dragging from the connection points.
                   </p>
